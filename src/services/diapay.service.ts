@@ -49,7 +49,7 @@ export const diapayService = {
         currency: toDiapayCurrency(order.currency),
         successUrl: `${env.diamarketSuccessUrl}?orderId=${encodeURIComponent(orderId)}`,
         cancelUrl: `${env.diamarketCancelUrl}?orderId=${encodeURIComponent(orderId)}`,
-        customer: { id: String(order.customer || '') },
+        customer: String(order.customer || ''),
         items: (order.items || []).map((item) => ({
           name: item.name || 'Article Diamarket',
           quantity: item.quantity || 1,
