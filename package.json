@@ -17,7 +17,7 @@
     "express": "^4.19.2",
     "mongoose": "^8.4.3",
     "morgan": "^1.10.0",
-    "diapay-sdk-js": "file:../../packages/diapay-sdk-js",
+
     "jsonwebtoken": "^9.0.2"
   },
   "devDependencies": {

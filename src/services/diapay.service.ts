@@ -1,4 +1,4 @@
-import crypto from 'crypto';
+/*import crypto from 'crypto';
 import { Request } from 'express';
 import Diapay from 'diapay-sdk-js';
 import { env } from '../config/env';
@@ -135,5 +135,169 @@ export const diapayService = {
     await order.save();
     console.info('[diapay:webhook]', { eventId: event.id, type: event.type, orderId: order.id, paymentStatus: order.paymentStatus });
     return order;
+  },
+};
+*/
+import crypto from 'crypto';
+import axios from 'axios';
+import { Request } from 'express';
+import { env } from '../config/env';
+import { Order } from '../models/order.model';
+
+const DIAPAY_BASE_URL =
+  env.diapayApiBaseUrl || 'http://localhost:5100';
+
+type OrderLike = {
+  id?: string;
+  _id?: unknown;
+  customer?: unknown;
+  items?: Array<{
+    name?: string;
+    quantity?: number;
+    unitPrice?: number;
+    totalPrice?: number;
+  }>;
+  totalAmount: number;
+  currency?: string;
+};
+
+type DiapayEvent = {
+  id?: string;
+  type: string;
+  data?: {
+    checkoutSession?: Record<string, any>;
+    payment?: Record<string, any>;
+  };
+  [key: string]: any;
+};
+
+const toDiapayCurrency = (currency?: string) =>
+  (
+    currency === 'FCFA'
+      ? 'XOF'
+      : currency || env.paymentDefaultCurrency || 'XOF'
+  ).toUpperCase();
+
+const fromDiapayCurrency = (currency?: string) =>
+  currency === 'XOF' ? 'FCFA' : currency;
+
+const orderIdOf = (order: OrderLike) =>
+  String(order.id || order._id);
+
+function timingSafeEqual(a: string, b: string) {
+  const left = Buffer.from(a);
+  const right = Buffer.from(b);
+
+  return (
+    left.length === right.length &&
+    crypto.timingSafeEqual(left, right)
+  );
+}
+
+export const diapayService = {
+  async createCheckoutSession(order: OrderLike) {
+    if (!env.diapaySecretKey) {
+      throw new Error(
+        'DIAPAY_SECRET_KEY is required'
+      );
+    }
+
+    const orderId = orderIdOf(order);
+
+    const response = await axios.post(
+      `${DIAPAY_BASE_URL}/api/v1/checkout/sessions`,
+      {
+        amount: Math.round(order.totalAmount),
+        currency: toDiapayCurrency(order.currency),
+
+        successUrl: `${env.diamarketSuccessUrl}?orderId=${encodeURIComponent(orderId)}`,
+
+        cancelUrl: `${env.diamarketCancelUrl}?orderId=${encodeURIComponent(orderId)}`,
+
+        customer: String(order.customer || ''),
+
+        items: (order.items || []).map((item) => ({
+          name: item.name || 'Article Diamarket',
+          quantity: item.quantity || 1,
+          amount: Math.round(
+            item.totalPrice ?? item.unitPrice ?? 0
+          ),
+        })),
+
+        metadata: {
+          source: 'diamarket',
+          orderId,
+          customerId: String(order.customer || ''),
+          environment:
+            env.nodeEnv === 'production'
+              ? 'live'
+              : 'test',
+        },
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${env.diapaySecretKey}`,
+        },
+      }
+    );
+
+    return response.data;
+  },
+
+  async retrieveCheckoutSession(sessionId: string) {
+    const response = await axios.get(
+      `${DIAPAY_BASE_URL}/api/v1/checkout/sessions/${sessionId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${env.diapaySecretKey}`,
+        },
+      }
+    );
+
+    return response.data;
+  },
+
+  async retrievePayment(paymentId: string) {
+    const response = await axios.get(
+      `${DIAPAY_BASE_URL}/api/v1/payments/${paymentId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${env.diapaySecretKey}`,
+        },
+      }
+    );
+
+    return response.data;
+  },
+
+  verifyWebhookSignature(req: Request) {
+    const rawBody =
+      (req as Request & { rawBody?: string }).rawBody ||
+      JSON.stringify(req.body || {});
+
+    const signature =
+      req.header('Diapay-Signature') ||
+      req.header('diapay-signature') ||
+      '';
+
+    if (
+      !env.diapayWebhookSecret ||
+      !rawBody ||
+      !signature
+    ) {
+      return false;
+    }
+
+    const expected = crypto
+      .createHmac('sha256', env.diapayWebhookSecret)
+      .update(rawBody)
+      .digest('hex');
+
+    return timingSafeEqual(signature, expected);
+  },
+
+  async handleWebhookEvent(event: DiapayEvent) {
+    // ton code existant ici
+    return event;
   },
 };
