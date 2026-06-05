@@ -4,6 +4,8 @@
     "module": "CommonJS",
     "moduleResolution": "Node",
 
+    "ignoreDeprecations": "6.0",
+
     "rootDir": "src",
     "outDir": "dist",
 
