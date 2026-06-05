@@ -12,8 +12,6 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
 
-    "types": ["node"],
-
     "forceConsistentCasingInFileNames": true
   },
 
