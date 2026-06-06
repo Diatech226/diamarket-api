@@ -26,6 +26,8 @@
     "mongoose": "^8.4.3",
     "morgan": "^1.10.0",
 
+  "@types/node": "^22.10.2",
+
     "jsonwebtoken": "^9.0.2"
   },
   "devDependencies": {
