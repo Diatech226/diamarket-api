@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
 import { Project, PROJECT_STATUSES } from '../models/project.model';
+import { getAuth } from '../middlewares/requireAuth';
+import { ownerScope } from '../middlewares/resource-access';
 
 function slugify(value: string) {
   return value
@@ -100,13 +102,13 @@ export const projectsController = {
   async update(req: Request, res: Response) {
     const payload = cleanProjectPayload(req.body ?? {}, false);
     if (typeof payload.slug === 'string') payload.slug = await uniqueProjectSlug(payload.slug, req.params.id);
-    const updated = await Project.findByIdAndUpdate(req.params.id, payload, { new: true, runValidators: true }).populate('coverMedia galleryMedia media');
+    const updated = await Project.findOneAndUpdate({ _id: req.params.id, ...ownerScope(getAuth(req)!) }, payload, { new: true, runValidators: true }).populate('coverMedia galleryMedia media');
     if (!updated) return res.status(404).json({ message: 'Project not found' });
     return res.json({ data: updated });
   },
 
   async remove(req: Request, res: Response) {
-    const deleted = await Project.findByIdAndDelete(req.params.id);
+    const deleted = await Project.findOneAndDelete({ _id: req.params.id, ...ownerScope(getAuth(req)!) });
     if (!deleted) return res.status(404).json({ message: 'Project not found' });
     return res.status(204).send();
   },

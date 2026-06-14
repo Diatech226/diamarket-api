@@ -12,3 +12,4 @@ export * from './vendor.model';
 export * from './commission.model';
 export * from './media.model';
 export * from './project.model';
+export * from './admin-audit-log.model';

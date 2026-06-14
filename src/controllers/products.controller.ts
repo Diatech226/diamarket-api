@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
 import { Product } from '../models/product.model';
+import { getAuth } from '../middlewares/requireAuth';
+import { ownerScope } from '../middlewares/resource-access';
 
 export const productsController = {
   async list(req: Request, res: Response) {
@@ -7,10 +9,9 @@ export const productsController = {
     const limit = Math.min(Number(req.query.limit || 20), 100);
     const skip = (page - 1) * limit;
 
-    const filter: Record<string, unknown> = {};
+    const filter: Record<string, unknown> = { status: 'active' };
     if (req.query.category) filter.category = req.query.category;
     if (req.query.vendor) filter.vendor = req.query.vendor;
-    if (req.query.status) filter.status = req.query.status;
     if (req.query.isFeatured) filter.isFeatured = req.query.isFeatured === 'true';
     if (req.query.search) filter.$text = { $search: String(req.query.search) };
 
@@ -23,24 +24,29 @@ export const productsController = {
   },
 
   async getBySlug(req: Request, res: Response) {
-    const item = await Product.findOne({ slug: req.params.slug }).populate('category vendor');
+    const item = await Product.findOne({ slug: req.params.slug, status: 'active' }).populate('category vendor');
     if (!item) return res.status(404).json({ message: 'Product not found' });
     return res.json({ data: item });
   },
 
   async create(req: Request, res: Response) {
-    const created = await Product.create(req.body);
+    const auth = getAuth(req)!;
+    if (auth.role === 'vendor' && !auth.vendorId) return res.status(403).json({ message: 'Active vendor account required' });
+    const created = await Product.create({ ...req.body, vendor: auth.role === 'vendor' ? auth.vendorId : req.body.vendor, ownerUserId: auth.userId });
     return res.status(201).json({ data: created });
   },
 
   async update(req: Request, res: Response) {
-    const updated = await Product.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const auth = getAuth(req)!;
+    const payload = { ...req.body };
+    if (auth.role !== 'admin') { delete payload.vendor; delete payload.ownerUserId; }
+    const updated = await Product.findOneAndUpdate({ _id: req.params.id, ...ownerScope(auth) }, payload, { new: true, runValidators: true });
     if (!updated) return res.status(404).json({ message: 'Product not found' });
     return res.json({ data: updated });
   },
 
   async remove(req: Request, res: Response) {
-    const deleted = await Product.findByIdAndDelete(req.params.id);
+    const deleted = await Product.findOneAndDelete({ _id: req.params.id, ...ownerScope(getAuth(req)!) });
     if (!deleted) return res.status(404).json({ message: 'Product not found' });
     return res.status(204).send();
   },

@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { Category } from '../models/category.model';
+import { Product } from '../models/product.model';
 
 export const categoriesController = {
   async list(_req: Request, res: Response) {
@@ -16,6 +17,7 @@ export const categoriesController = {
     return res.json({ data });
   },
   async remove(req: Request, res: Response) {
+    if (await Product.exists({ category: req.params.id })) return res.status(409).json({ message: 'Category is used by products; disable it instead' });
     const data = await Category.findByIdAndDelete(req.params.id);
     if (!data) return res.status(404).json({ message: 'Category not found' });
     return res.status(204).send();

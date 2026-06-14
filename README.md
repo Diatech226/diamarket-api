@@ -38,6 +38,13 @@ See `.env.example`.
 - `GET /api/orders/:id`
 - `PUT /api/orders/:id/status`
 
+## Healthchecks
+
+- `GET /health` ou `GET /api/health` : liveness du processus.
+- `GET /ready` ou `GET /api/ready` : readiness MongoDB, avec HTTP 503 si la base ne répond pas.
+
+Le contrat OpenAPI initial est disponible dans `docs/diamarket/openapi.yaml`.
+
 ## Status
 
 ### Order status

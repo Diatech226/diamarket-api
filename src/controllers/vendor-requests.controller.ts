@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { VendorRequest } from '../models/vendor-request.model';
 import { Vendor } from '../models/vendor.model';
+import { User } from '../models/user.model';
 
 export const vendorRequestsController = {
   async create(req: Request, res: Response) {
@@ -17,7 +18,8 @@ export const vendorRequestsController = {
     const request = await VendorRequest.findByIdAndUpdate(req.params.id, { status: 'active', reviewedBy: auth?.userId, reviewedAt: new Date() }, { new: true });
     if (!request) return res.status(404).json({ message: 'Vendor request not found' });
 
-    const vendor = await Vendor.create({ userId: request.userId, shopName: request.businessName, status: 'active', isActive: true });
+    const vendor = await Vendor.findOneAndUpdate({ userId: request.userId }, { shopName: request.businessName, status: 'active', isActive: true }, { new: true, upsert: true, runValidators: true });
+    await User.findByIdAndUpdate(request.userId, { role: 'vendor' }, { runValidators: true });
     return res.json({ data: { request, vendor } });
   },
   async reject(req: Request, res: Response) {

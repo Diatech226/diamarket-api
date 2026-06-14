@@ -1,8 +1,8 @@
 import { Schema, model } from 'mongoose';
 
 export const ORDER_STATUSES = ['pending', 'confirmed', 'paid', 'processing', 'shipped', 'delivered', 'cancelled'] as const;
-export const SHIPMENT_STATUSES = ['not_created', 'estimated', 'created', 'in_transit', 'delivered', 'failed'] as const;
-export const PAYMENT_STATUSES = ['unpaid', 'pending', 'paid', 'failed', 'cancelled', 'expired', 'refunded'] as const;
+export const SHIPMENT_STATUSES = ['pending', 'created', 'picked_up', 'in_transit', 'out_for_delivery', 'delivered', 'failed', 'returned', 'cancelled'] as const;
+export const PAYMENT_STATUSES = ['pending', 'processing', 'paid', 'failed', 'cancelled', 'expired', 'refunded', 'partially_refunded', 'disputed'] as const;
 export const PAYMENT_PROVIDERS = ['cash_on_delivery', 'diapay'] as const;
 
 const OrderItemSchema = new Schema(
@@ -21,19 +21,23 @@ const OrderSchema = new Schema(
     customer: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     vendor: { type: Schema.Types.ObjectId, ref: 'Vendor', required: true, index: true },
     items: { type: [OrderItemSchema], required: true },
+    subtotalAmount: { type: Number, required: true, min: 0 },
+    shippingAmount: { type: Number, required: true, min: 0, default: 0 },
     totalAmount: { type: Number, required: true, min: 0 },
     currency: { type: String, enum: ['FCFA', 'XOF', 'USD'], default: 'FCFA' },
     status: { type: String, enum: ORDER_STATUSES, default: 'pending', index: true },
     paymentProvider: { type: String, enum: PAYMENT_PROVIDERS, default: 'cash_on_delivery', index: true },
-    paymentStatus: { type: String, enum: PAYMENT_STATUSES, default: 'unpaid', index: true },
-    paymentMethod: { type: String },
+    paymentStatus: { type: String, enum: PAYMENT_STATUSES, default: 'pending', index: true },
+    paymentMethod: { type: String, required: true },
+    shippingOptionId: { type: String, required: true },
+    address: { country: { type: String, required: true }, city: { type: String, required: true }, phone: { type: String, required: true }, line1: String },
     diapaySessionId: { type: String, index: true },
     diapayPaymentId: { type: String, index: true },
     checkoutUrl: { type: String },
     paidAt: { type: Date },
     cancelledAt: { type: Date },
     failedAt: { type: Date },
-    shipmentStatus: { type: String, enum: SHIPMENT_STATUSES, default: 'not_created', index: true },
+    shipmentStatus: { type: String, enum: SHIPMENT_STATUSES, default: 'pending', index: true },
     marketplacePointId: { type: Schema.Types.ObjectId, ref: 'MarketplacePoint' },
     shippingEstimate: {
       provider: String,
@@ -46,7 +50,8 @@ const OrderSchema = new Schema(
         eventId: String,
         type: String,
         receivedAt: { type: Date, default: Date.now },
-        payload: Schema.Types.Mixed,
+        processedAt: Date,
+        status: { type: String, enum: ['processing', 'processed', 'ignored', 'failed'], default: 'processing' },
       },
     ],
   },

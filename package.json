@@ -2,40 +2,34 @@
   "name": "diamarket-api",
   "version": "0.1.0",
   "private": true,
-  "packageManager": "pnpm@9.12.0",
   "main": "dist/server.js",
-  
-  
-  "engines": {
-    "node": "20.x"
-  },
-
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
-    "lint": "echo \"No lint configured\"",
+    "lint": "eslint \"src/**/*.ts\"",
     "typecheck": "tsc --noEmit",
-    "test:mongo:dns": "node scripts/test-mongo-dns.js"
+    "test:mongo:dns": "node scripts/test-mongo-dns.js",
+    "reconcile:diapay": "tsx scripts/reconcile-diapay.ts",
+    "test": "npm run typecheck"
   },
   "dependencies": {
+    "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
-    "axios": "^1.10.0",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "mongoose": "^8.4.3",
     "morgan": "^1.10.0",
-
-  "@types/node": "^22.10.2",
-
+    "diapay-sdk-js": "0.1.0",
     "jsonwebtoken": "^9.0.2"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
     "@types/morgan": "^1.9.9",
-  
+    "@types/node": "^22.10.2",
     "ts-node-dev": "^2.0.0",
+    "tsx": "^4.20.6",
     "typescript": "^5.5.2",
     "@types/jsonwebtoken": "^9.0.7"
   }

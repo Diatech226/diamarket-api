@@ -5,6 +5,8 @@ import morgan from 'morgan';
 import { apiRouter } from './routes';
 import { errorHandler } from './middlewares/error.middleware';
 import { env } from './config/env';
+import { systemRouter } from './routes/system.routes';
+import { sanitizeRequest } from './middlewares/sanitize.middleware';
 
 const rateBucket = new Map<string, { count: number; resetAt: number }>();
 
@@ -15,7 +17,7 @@ const isAllowedOrigin = (origin: string | undefined) => {
     return env.corsAllowedOrigins.includes(origin);
   }
 
-  return /localhost|diamarket/.test(origin);
+  return env.nodeEnv === 'development' && /localhost|diamarket/.test(origin);
 };
 
 export const app = express();
@@ -24,6 +26,9 @@ app.use((req, res, next) => {
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('Content-Security-Policy', "default-src 'none'; frame-ancestors 'none'");
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  if (env.nodeEnv === 'production') res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   next();
 });
 app.use(
@@ -51,7 +56,9 @@ app.use(express.json({
     (req as express.Request & { rawBody?: string }).rawBody = buf.toString('utf8');
   }
 }));
+app.use(sanitizeRequest);
 app.use(morgan(env.nodeEnv === 'production' ? 'combined' : 'dev'));
 app.use('/uploads', express.static(path.resolve(__dirname, '../uploads')));
+app.use(systemRouter);
 app.use('/api', apiRouter);
 app.use(errorHandler);
