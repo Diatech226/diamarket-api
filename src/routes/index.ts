@@ -17,6 +17,7 @@ import { requireAdmin } from '../middlewares/requireAdmin';
 import { systemRouter } from './system.routes';
 import { shippingController } from '../controllers/shipping.controller';
 import { adminController } from '../controllers/admin.controller';
+import { slidesController } from '../controllers/slides.controller';
 
 const validateProduct = (req: Request) => {
   const required = ['name', 'slug', 'description', 'price', 'currency', 'category', 'vendor', 'stock'];
@@ -46,6 +47,9 @@ apiRouter.use(['/admin', '/cms', '/dashboard'], requireAuth, requireAdmin);
 apiRouter.get('/admin/dashboard', adminController.dashboard);
 apiRouter.get('/admin/products', adminController.products);
 apiRouter.get('/admin/categories', adminController.categories);
+apiRouter.post('/admin/slides', slidesController.create);
+apiRouter.put('/admin/slides/:id', slidesController.update);
+apiRouter.delete('/admin/slides/:id', slidesController.remove);
 apiRouter.post('/admin/categories', validateRequest(validateCategory), categoriesController.create);
 apiRouter.put('/admin/categories/:id', categoriesController.update);
 apiRouter.delete('/admin/categories/:id', categoriesController.remove);
@@ -74,6 +78,8 @@ apiRouter.post('/media/url', requireAuth, requireAdmin, requirePermission('media
 apiRouter.post('/media/upload', requireAuth, requireAdmin, requirePermission('media:manage'), localImageUpload, mediaController.upload);
 apiRouter.put('/media/:id', requireAuth, requireAdmin, requirePermission('media:manage'), mediaController.update);
 apiRouter.delete('/media/:id', requireAuth, requireAdmin, requirePermission('media:manage'), mediaController.remove);
+apiRouter.get('/slides', slidesController.list);
+apiRouter.get('/slides/:id', slidesController.getById);
 apiRouter.get('/categories', categoriesController.list);
 apiRouter.post('/categories', requireAuth, requireAdmin, validateRequest(validateCategory), categoriesController.create);
 apiRouter.put('/categories/:id', requireAuth, requireAdmin, categoriesController.update);

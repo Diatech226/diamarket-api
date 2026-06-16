@@ -11,10 +11,23 @@ npm run dev
 
 See `.env.example`.
 
+Local admin bootstrap variables:
+
+```env
+ADMIN_DEFAULT_EMAIL=
+ADMIN_DEFAULT_PASSWORD=
+ADMIN_DEFAULT_NAME=
+ADMIN_RESET_PASSWORD_ON_START=false
+```
+
+At startup, the API creates the default admin when no admin exists. If an admin already exists,
+`ADMIN_RESET_PASSWORD_ON_START=true` resets the admin password from `ADMIN_DEFAULT_PASSWORD` without logging the password.
+You can also run `npm run seed:admin` from `apps/diamarket-api`.
+
 ## Déploiement Render
 
 Le service Render doit utiliser `apps/diamarket-api` comme **Root Directory**,
-Node.js 20.x et npm. Aucune installation globale de pnpm n'est nécessaire (et
+Node.js 20.x et npm. Aucune installation globale d’un gestionnaire alternatif n'est nécessaire (et
 le système de fichiers global de Render est en lecture seule).
 
 ```text
@@ -24,7 +37,7 @@ Health Check Path: /api/health
 ```
 
 La cause de l'erreur `EROFS` est une commande de build personnalisée qui tente
-d'installer pnpm globalement dans `/usr/lib/node_modules`, un emplacement en
+d'installer un gestionnaire alternatif globalement dans `/usr/lib/node_modules`, un emplacement en
 lecture seule sur Render. Le Blueprint `render.yaml` du dépôt ne contient pas
 cette commande. Si le service Render existait avant le Blueprint, vérifier
 également la commande enregistrée dans le dashboard Render : une valeur saisie
@@ -44,6 +57,13 @@ commités.
 - `POST /api/products`
 - `PUT /api/products/:id`
 - `DELETE /api/products/:id`
+
+### Slides
+- `GET /api/slides`
+- `GET /api/slides/:id`
+- `POST /api/admin/slides`
+- `PUT /api/admin/slides/:id`
+- `DELETE /api/admin/slides/:id`
 
 ### Categories
 - `GET /api/categories`

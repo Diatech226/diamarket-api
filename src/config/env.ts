@@ -30,9 +30,10 @@ export const env = {
   adminDefaultEmail: (process.env.ADMIN_DEFAULT_EMAIL ?? '').trim().toLowerCase(),
   adminDefaultPassword: process.env.ADMIN_DEFAULT_PASSWORD ?? '',
   adminDefaultName: process.env.ADMIN_DEFAULT_NAME ?? 'Admin Diamarket',
+  adminResetPasswordOnStart: process.env.ADMIN_RESET_PASSWORD_ON_START === 'true',
   adminWhitelist: parseList(process.env.ADMIN_WHITELIST).map((email) => email.toLowerCase()),
   allowAuthHeaderBridge: process.env.AUTH_ALLOW_HEADER_BRIDGE === 'true',
-  corsAllowedOrigins: parseList(process.env.CORS_ALLOWED_ORIGINS),
+  corsAllowedOrigins: parseList(process.env.CORS_ORIGINS ?? process.env.CORS_ALLOWED_ORIGINS),
   shippingProvider: process.env.SHIPPING_PROVIDER ?? 'diaexpress',
   shippingDemoMode: process.env.SHIPPING_DEMO_MODE === 'true',
   shippingDefaultCurrency: process.env.SHIPPING_DEFAULT_CURRENCY ?? 'XOF',
@@ -54,5 +55,5 @@ export const env = {
   diapayApiTimeout: Number(process.env.DIAPAY_API_TIMEOUT ?? 15000),
   diamarketSuccessUrl: process.env.DIAMARKET_SUCCESS_URL ?? 'http://localhost:3000/orders/success',
   diamarketCancelUrl: process.env.DIAMARKET_CANCEL_URL ?? 'http://localhost:3000/orders/cancel',
-  paymentDefaultCurrency: process.env.PAYMENT_DEFAULT_CURRENCY ?? 'FCFA'
+  paymentDefaultCurrency: process.env.PAYMENT_DEFAULT_CURRENCY ?? 'XOF'
 };
