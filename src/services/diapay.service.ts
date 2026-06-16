@@ -1,13 +1,17 @@
 import crypto from 'crypto';
 import { Request } from 'express';
-import Diapay from 'diapay-sdk-js';
+import axios from 'axios';
 import { env } from '../config/env';
 import { Order } from '../models/order.model';
 import { PaymentEvent } from '../models/payment-event.model';
 
-const diapay = new Diapay({
-  baseUrl: env.diapayApiBaseUrl || 'http://localhost:5100',
-  secretKey: env.diapaySecretKey,
+const diapayClient = axios.create({
+  baseURL: env.diapayApiBaseUrl || 'http://localhost:5100',
+  headers: {
+    Authorization: `Bearer ${env.diapaySecretKey}`,
+    'Content-Type': 'application/json',
+  },
+  timeout: env.diapayApiTimeout || 15000,
 });
 
 type OrderLike = {
@@ -44,7 +48,8 @@ export const diapayService = {
     if (!env.diapaySecretKey) throw new Error('DIAPAY_SECRET_KEY is required to create a Diapay Checkout session');
 
     const orderId = orderIdOf(order);
-    const session = await diapay.checkout.sessions.create(
+    const { data: session } = await diapayClient.post(
+      '/checkout/sessions',
       {
         amount: Math.round(order.totalAmount),
         currency: toDiapayCurrency(order.currency),
@@ -63,18 +68,24 @@ export const diapayService = {
           environment: env.nodeEnv === 'production' ? 'live' : 'test',
         },
       },
-      { idempotencyKey: `diamarket-order-${orderId}` },
-    ) as Record<string, any>;
+      {
+        headers: {
+          'Idempotency-Key': `diamarket-order-${orderId}`,
+        },
+      },
+    );
 
     return session;
   },
 
-  retrieveCheckoutSession(sessionId: string) {
-    return diapay.checkout.sessions.retrieve(sessionId) as Promise<Record<string, any>>;
+  async retrieveCheckoutSession(sessionId: string) {
+    const { data } = await diapayClient.get(`/checkout/sessions/${encodeURIComponent(sessionId)}`);
+    return data as Record<string, any>;
   },
 
-  retrievePayment(paymentId: string) {
-    return diapay.retrievePayment(paymentId) as Promise<Record<string, any>>;
+  async retrievePayment(paymentId: string) {
+    const { data } = await diapayClient.get(`/payments/${encodeURIComponent(paymentId)}`);
+    return data as Record<string, any>;
   },
 
   verifyWebhookSignature(req: Request) {
