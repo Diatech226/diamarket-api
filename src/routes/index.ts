@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { Request } from 'express';
+import { Request, Response } from 'express';
 import { categoriesController } from '../controllers/categories.controller';
 import { ordersController } from '../controllers/orders.controller';
 import { paymentsController } from '../controllers/payments.controller';
@@ -18,6 +18,21 @@ import { systemRouter } from './system.routes';
 import { shippingController } from '../controllers/shipping.controller';
 import { adminController } from '../controllers/admin.controller';
 import { slidesController } from '../controllers/slides.controller';
+import { User, Vendor, Setting } from '../models';
+import { AuthContext } from '../middlewares/requireAuth';
+
+const listUsers = async (_req: Request, res: Response) => res.json({ success: true, data: await User.find().select('-passwordHash').sort({ createdAt: -1 }) });
+const getCurrentUser = async (req: Request, res: Response) => {
+  const auth = (req as Request & { auth: AuthContext }).auth;
+  const user = await User.findById(auth.userId).select('-passwordHash');
+  if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+  return res.json({ success: true, data: user });
+};
+const listVendors = async (_req: Request, res: Response) => res.json({ success: true, data: await Vendor.find().sort({ createdAt: -1 }) });
+const publicSettings = async (_req: Request, res: Response) => {
+  const rows = await Setting.find({ key: { $in: ['marketplaceName', 'defaultCurrency', 'supportContact', 'maintenanceMode', 'checkout', 'shipping'] } });
+  return res.json({ success: true, data: Object.fromEntries(rows.map((row) => [row.key, row.value])) });
+};
 
 const validateProduct = (req: Request) => {
   const required = ['name', 'slug', 'description', 'price', 'currency', 'category', 'vendor', 'stock'];
@@ -46,6 +61,8 @@ apiRouter.use(systemRouter);
 apiRouter.use(['/admin', '/cms', '/dashboard'], requireAuth, requireAdmin);
 apiRouter.get('/admin/dashboard', adminController.dashboard);
 apiRouter.get('/admin/products', adminController.products);
+apiRouter.get('/admin/users', listUsers);
+apiRouter.get('/admin/slides', slidesController.list);
 apiRouter.get('/admin/categories', adminController.categories);
 apiRouter.post('/admin/slides', slidesController.create);
 apiRouter.put('/admin/slides/:id', slidesController.update);
@@ -63,6 +80,10 @@ apiRouter.put('/admin/vendor-requests/:id/reject', vendorRequestsController.reje
 apiRouter.put('/admin/vendors/:id/status', adminController.updateVendorStatus);
 apiRouter.get('/admin/settings', adminController.settings);
 apiRouter.put('/admin/settings', adminController.updateSettings);
+apiRouter.get('/users/me', requireAuth, getCurrentUser);
+apiRouter.get('/users', requireAuth, requireAdmin, listUsers);
+apiRouter.get('/vendors', listVendors);
+apiRouter.get('/settings', publicSettings);
 apiRouter.get('/products', productsController.list);
 apiRouter.get('/products/:slug', productsController.getBySlug);
 apiRouter.post('/products', requireAuth, requireRole('admin', 'vendor'), requirePermission('products:create'), validateRequest(validateProduct), productsController.create);

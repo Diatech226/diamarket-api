@@ -21,7 +21,7 @@ export const env = {
   port: Number(process.env.PORT ?? 5000),
   clerkIssuer: process.env.CLERK_ISSUER_URL ?? '',
   clerkSecretKey: process.env.CLERK_SECRET_KEY ?? '',
-  publicRegistrationEnabled: process.env.PUBLIC_REGISTRATION_ENABLED === 'true',
+  publicRegistrationEnabled: process.env.PUBLIC_REGISTRATION_ENABLED !== 'false',
   emailPasswordAuthEnabled: process.env.ENABLE_EMAIL_PASSWORD_AUTH !== 'false',
   defaultPublicRole: 'user',
   jwtSecret: process.env.JWT_SECRET ?? process.env.AUTH_SESSION_SECRET ?? '',

@@ -35,6 +35,7 @@ function parseCookies(header?: string) {
   return Object.fromEntries(
     (header ?? '').split(';').map((part) => part.trim()).filter(Boolean).map((part) => {
       const separator = part.indexOf('=');
+      if (separator <= 0) return ['', ''];
       return [decodeURIComponent(part.slice(0, separator)), decodeURIComponent(part.slice(separator + 1))];
     }),
   );
