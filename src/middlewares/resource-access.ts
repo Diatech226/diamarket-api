@@ -6,5 +6,7 @@ export function orderScope(auth: AuthContext): Record<string, unknown> {
   return { customer: auth.userId };
 }
 export function ownerScope(auth: AuthContext, ownerField = 'ownerUserId'): Record<string, unknown> {
-  return auth.role === 'admin' ? {} : { [ownerField]: auth.userId };
+  if (auth.role === 'admin') return {};
+  if (auth.role === 'vendor' && auth.vendorId) return { vendor: auth.vendorId };
+  return { [ownerField]: auth.userId };
 }

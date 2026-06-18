@@ -1,8 +1,8 @@
 import { Schema, model } from 'mongoose';
 
-export const ORDER_STATUSES = ['pending', 'confirmed', 'paid', 'processing', 'shipped', 'delivered', 'cancelled'] as const;
+export const ORDER_STATUSES = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded'] as const;
 export const SHIPMENT_STATUSES = ['pending', 'created', 'picked_up', 'in_transit', 'out_for_delivery', 'delivered', 'failed', 'returned', 'cancelled'] as const;
-export const PAYMENT_STATUSES = ['pending', 'processing', 'paid', 'failed', 'cancelled', 'expired', 'refunded', 'partially_refunded', 'disputed'] as const;
+export const PAYMENT_STATUSES = ['pending', 'paid', 'failed', 'cancelled', 'expired', 'refunded'] as const;
 export const PAYMENT_PROVIDERS = ['cash_on_delivery', 'diapay'] as const;
 
 const OrderItemSchema = new Schema(

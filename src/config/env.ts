@@ -55,5 +55,9 @@ export const env = {
   diapayApiTimeout: Number(process.env.DIAPAY_API_TIMEOUT ?? 15000),
   diamarketSuccessUrl: process.env.DIAMARKET_SUCCESS_URL ?? 'http://localhost:3000/orders/success',
   diamarketCancelUrl: process.env.DIAMARKET_CANCEL_URL ?? 'http://localhost:3000/orders/cancel',
-  paymentDefaultCurrency: process.env.PAYMENT_DEFAULT_CURRENCY ?? 'XOF'
+  paymentDefaultCurrency: process.env.PAYMENT_DEFAULT_CURRENCY ?? 'XOF',
+  mediaMaxSizeMb: Number(process.env.MEDIA_MAX_SIZE_MB ?? 8),
+  mediaAllowedTypes: parseList(process.env.MEDIA_ALLOWED_TYPES ?? 'image/jpeg,image/png,image/webp'),
+  mediaStorageDriver: process.env.MEDIA_STORAGE_DRIVER ?? 'local',
+  mediaUploadDir: process.env.MEDIA_UPLOAD_DIR ?? 'uploads/media'
 };

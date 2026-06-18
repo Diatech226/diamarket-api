@@ -1,7 +1,9 @@
 import { Request, Response } from 'express';
 import { Product } from '../models/product.model';
+import { Category } from '../models/category.model';
 import { getAuth } from '../middlewares/requireAuth';
 import { ownerScope } from '../middlewares/resource-access';
+import { syncMediaUsage } from '../services/media-usage.service';
 
 export const productsController = {
   async list(req: Request, res: Response) {
@@ -10,7 +12,13 @@ export const productsController = {
     const skip = (page - 1) * limit;
 
     const filter: Record<string, unknown> = { status: 'active' };
-    if (req.query.category) filter.category = req.query.category;
+    if (req.query.category) {
+      const activeCategory = await Category.exists({ _id: req.query.category, active: true });
+      filter.category = activeCategory ? req.query.category : null;
+    } else {
+      const activeCategoryIds = await Category.distinct('_id', { active: true });
+      filter.category = { $in: activeCategoryIds };
+    }
     if (req.query.vendor) filter.vendor = req.query.vendor;
     if (req.query.isFeatured) filter.isFeatured = req.query.isFeatured === 'true';
     if (req.query.search) filter.$text = { $search: String(req.query.search) };
@@ -25,7 +33,7 @@ export const productsController = {
 
   async getBySlug(req: Request, res: Response) {
     const item = await Product.findOne({ slug: req.params.slug, status: 'active' }).populate('category vendor');
-    if (!item) return res.status(404).json({ message: 'Product not found' });
+    if (!item || (typeof item.category === 'object' && item.category && 'active' in item.category && item.category.active === false)) return res.status(404).json({ message: 'Product not found' });
     return res.json({ data: item });
   },
 
@@ -33,6 +41,7 @@ export const productsController = {
     const auth = getAuth(req)!;
     if (auth.role === 'vendor' && !auth.vendorId) return res.status(403).json({ message: 'Active vendor account required' });
     const created = await Product.create({ ...req.body, vendor: auth.role === 'vendor' ? auth.vendorId : req.body.vendor, ownerUserId: auth.userId });
+    await syncMediaUsage('product', created._id, 'images', created.images ?? []);
     return res.status(201).json({ data: created });
   },
 
@@ -40,14 +49,18 @@ export const productsController = {
     const auth = getAuth(req)!;
     const payload = { ...req.body };
     if (auth.role !== 'admin') { delete payload.vendor; delete payload.ownerUserId; }
-    const updated = await Product.findOneAndUpdate({ _id: req.params.id, ...ownerScope(auth) }, payload, { new: true, runValidators: true });
+    const previous = await Product.findOne({ _id: req.params.id, ...ownerScope(auth) });
+    if (!previous) return res.status(404).json({ message: 'Product not found' });
+    const updated = await Product.findByIdAndUpdate(previous._id, payload, { new: true, runValidators: true });
     if (!updated) return res.status(404).json({ message: 'Product not found' });
+    if (payload.images) await syncMediaUsage('product', updated._id, 'images', updated.images ?? [], previous.images ?? []);
     return res.json({ data: updated });
   },
 
   async remove(req: Request, res: Response) {
     const deleted = await Product.findOneAndDelete({ _id: req.params.id, ...ownerScope(getAuth(req)!) });
     if (!deleted) return res.status(404).json({ message: 'Product not found' });
+    await syncMediaUsage('product', deleted._id, 'images', [], deleted.images ?? []);
     return res.status(204).send();
   },
 };

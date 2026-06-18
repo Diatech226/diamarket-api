@@ -13,7 +13,7 @@ export const paymentsController = {
 
     const order = await Order.findOne({ _id: orderId, ...orderScope(getAuth(req)!) });
     if (!order) return res.status(404).json({ message: 'Order not found' });
-    if (['paid', 'refunded', 'partially_refunded', 'disputed'].includes(order.paymentStatus)) return res.status(409).json({ message: 'Order is already paid' });
+    if (['paid', 'refunded'].includes(order.paymentStatus)) return res.status(409).json({ message: 'Order is already paid' });
     if (['cancelled', 'expired'].includes(order.paymentStatus) || order.status === 'cancelled') return res.status(409).json({ message: 'Order is not payable' });
 
     if (order.diapaySessionId && order.checkoutUrl) return res.json({ success: true, orderId: order.id, sessionId: order.diapaySessionId, checkoutUrl: order.checkoutUrl });

@@ -60,7 +60,7 @@ app.use(express.json({
 }));
 app.use(sanitizeRequest);
 app.use(morgan(env.nodeEnv === 'production' ? 'combined' : 'dev'));
-app.use('/uploads', express.static(path.resolve(__dirname, '../uploads')));
+app.use('/uploads', express.static(path.resolve(__dirname, '../uploads'), { fallthrough: false, dotfiles: 'deny' }));
 app.use(systemRouter);
 app.use('/api', apiRouter);
 app.use(errorHandler);

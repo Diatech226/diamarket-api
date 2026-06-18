@@ -137,11 +137,8 @@ export const diapayService = {
     if (payment?.method) order.paymentMethod = String(payment.method);
 
     const transitions: Record<string, string[]> = {
-      pending: ['processing', 'paid', 'failed', 'cancelled', 'expired'],
-      processing: ['paid', 'failed', 'cancelled', 'expired'],
-      paid: ['refunded', 'partially_refunded', 'disputed'],
-      partially_refunded: ['refunded', 'disputed'],
-      disputed: ['paid', 'refunded', 'partially_refunded'],
+      pending: ['paid', 'failed', 'cancelled', 'expired'],
+      paid: ['refunded'],
     };
     const transition = (next: string) => {
       if (order.paymentStatus === next) return;
@@ -164,11 +161,7 @@ export const diapayService = {
       transition('expired');
       order.failedAt = new Date();
     } else if (event.type === 'refund.succeeded') {
-      transition(payment?.refundedAmount && Number(payment.refundedAmount) < order.totalAmount ? 'partially_refunded' : 'refunded');
-    } else if (event.type === 'payment.processing') {
-      transition('processing');
-    } else if (event.type === 'payment.disputed') {
-      transition('disputed');
+      transition('refunded');
     }
 
     await order.save();
