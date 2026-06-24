@@ -7,6 +7,7 @@ import { shippingService } from '../services/shipping';
 import { diaexpressService } from '../services/diaexpress.service';
 import { getAuth } from '../middlewares/requireAuth';
 import { orderScope } from '../middlewares/resource-access';
+import { resolveCommission } from '../services/commission.service';
 
 export const ordersController = {
   async create(req: Request, res: Response) {
@@ -27,6 +28,7 @@ export const ordersController = {
     const estimate = await diaexpressService.estimateShipping({ origin: { country: 'Burkina Faso', city: 'Ouagadougou' }, destination: req.body.address, weight: Math.max(1, items.reduce((sum, item) => sum + item.quantity, 0)), items });
     const shippingEstimate = { provider: estimate.provider, estimatedCost: estimate.amount, estimatedDeliveryDays: estimate.estimatedDeliveryDays, simulated: estimate.simulated };
     const shippingAmount = Number(estimate.amount || 0);
+    const commission = await resolveCommission({ product: products[0], vendor: products[0].vendor, category: products[0].category, amount: subtotalAmount });
 
     const session = await mongoose.startSession();
     try {
@@ -36,7 +38,7 @@ export const ordersController = {
           const updated = await Product.findOneAndUpdate({ _id: item.productId, status: 'active', stock: { $gte: item.quantity } }, { $inc: { stock: -item.quantity } }, { session, new: true });
           if (!updated) throw new Error('INSUFFICIENT_STOCK');
         }
-        [created] = await Order.create([{ customer: auth.userId, vendor: products[0].vendor, items, subtotalAmount, shippingAmount, totalAmount: subtotalAmount + shippingAmount, currency: products[0].currency, address: req.body.address, shippingOptionId: req.body.shippingOptionId, paymentProvider: req.body.paymentMethod === 'diapay' ? 'diapay' : 'cash_on_delivery', paymentMethod: req.body.paymentMethod, status: 'pending', paymentStatus: 'pending', shipmentStatus: 'pending', shippingEstimate }], { session });
+        [created] = await Order.create([{ customer: auth.userId, vendor: products[0].vendor, items, subtotalAmount, shippingAmount, totalAmount: subtotalAmount + shippingAmount, currency: products[0].currency, address: req.body.address, shippingOptionId: req.body.shippingOptionId, paymentProvider: req.body.paymentMethod === 'diapay' ? 'diapay' : 'cash_on_delivery', paymentMethod: req.body.paymentMethod, status: 'pending', paymentStatus: 'pending', shipmentStatus: 'pending', shippingEstimate, commissionRate: commission.rate, commissionAmount: commission.amount, marketplaceRevenue: commission.amount, vendorNetAmount: subtotalAmount - commission.amount, commissionSource: commission.source }], { session });
       });
       return res.status(201).json({ data: created });
     } catch (error) {

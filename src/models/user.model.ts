@@ -12,7 +12,7 @@ const UserSchema = new Schema(
     marketplacePointId: { type: Schema.Types.ObjectId, ref: 'MarketplacePoint' },
     countryScope: { type: [String], default: [] },
     locale: { type: String, default: 'fr' },
-    preferredCurrency: { type: String, enum: ['FCFA', 'USD'], default: 'FCFA' },
+    preferredCurrency: { type: String, enum: ['FCFA', 'XOF', 'USD', 'EUR', 'CAD', 'CNY'], default: 'XOF' },
   },
   { timestamps: true },
 );

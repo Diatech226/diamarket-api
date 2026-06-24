@@ -13,3 +13,4 @@ export * from './commission.model';
 export * from './media.model';
 export * from './project.model';
 export * from './admin-audit-log.model';
+export * from './team-member.model';

@@ -9,6 +9,7 @@ const CategorySchema = new Schema({
   order: { type: Number, default: 0 },
   image: String,
   icon: String,
+  commissionRate: { type: Number, min: 0, max: 1 },
   translations: { fr: Object, en: Object, zh: Object },
 }, { timestamps: true });
 
