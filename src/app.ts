@@ -7,6 +7,7 @@ import { errorHandler } from './middlewares/error.middleware';
 import { env } from './config/env';
 import { systemRouter } from './routes/system.routes';
 import { sanitizeRequest } from './middlewares/sanitize.middleware';
+import { swaggerEnabled, swaggerSpec } from './config/swagger';
 
 const rateBucket = new Map<string, { count: number; resetAt: number }>();
 
@@ -26,7 +27,11 @@ app.use((req, res, next) => {
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'no-referrer');
-  res.setHeader('Content-Security-Policy', "default-src 'none'; frame-ancestors 'none'");
+  if (req.path.startsWith('/api/docs')) {
+    res.setHeader('Content-Security-Policy', "default-src 'self' 'unsafe-inline' data:; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; frame-ancestors 'none'");
+  } else {
+    res.setHeader('Content-Security-Policy', "default-src 'none'; frame-ancestors 'none'");
+  }
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
   if (env.nodeEnv === 'production') res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   next();
@@ -62,5 +67,15 @@ app.use(sanitizeRequest);
 app.use(morgan(env.nodeEnv === 'production' ? 'combined' : 'dev'));
 app.use('/uploads', express.static(path.resolve(__dirname, '../uploads'), { fallthrough: false, dotfiles: 'deny' }));
 app.use(systemRouter);
+
+if (swaggerEnabled) {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const swaggerUi = require('swagger-ui-express');
+  app.get('/api/docs.json', (_req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    res.send(swaggerSpec);
+  });
+  app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+}
 app.use('/api', apiRouter);
 app.use(errorHandler);
