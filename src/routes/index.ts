@@ -90,6 +90,8 @@ apiRouter.use('/auth', authRouter);
 apiRouter.use(systemRouter);
 apiRouter.use(['/admin', '/cms', '/dashboard'], requireAuth, requireAdmin);
 apiRouter.get('/admin/dashboard', adminController.dashboard);
+apiRouter.get('/admin/audit-logs/export', adminController.auditLogsExport);
+apiRouter.get('/admin/audit-logs/:id', adminController.auditLogById);
 apiRouter.get('/admin/audit-logs', adminController.auditLogs);
 apiRouter.get('/admin/products', adminController.products);
 apiRouter.get('/admin/users', adminController.users);
@@ -142,6 +144,16 @@ apiRouter.put('/admin/vendor-requests/:id/reject', vendorRequestsController.reje
 apiRouter.put('/admin/vendors/:id/status', adminController.updateVendorStatus);
 apiRouter.get('/admin/settings', adminController.settings);
 apiRouter.put('/admin/settings', adminController.updateSettings);
+apiRouter.get('/analytics/overview', requireAuth, requireAdmin, adminController.analyticsOverview);
+apiRouter.get('/analytics/sales', requireAuth, requireAdmin, adminController.analyticsSection);
+apiRouter.get('/analytics/vendors', requireAuth, requireAdmin, adminController.analyticsSection);
+apiRouter.get('/analytics/products', requireAuth, requireAdmin, adminController.analyticsSection);
+apiRouter.get('/analytics/customers', requireAuth, requireAdmin, adminController.analyticsSection);
+apiRouter.get('/audit-logs/export', requireAuth, requireAdmin, adminController.auditLogsExport);
+apiRouter.get('/audit-logs/:id', requireAuth, requireAdmin, adminController.auditLogById);
+apiRouter.get('/audit-logs', requireAuth, requireAdmin, adminController.auditLogs);
+apiRouter.get('/settings', requireAuth, requireAdmin, adminController.settings);
+apiRouter.patch('/settings', requireAuth, requireAdmin, adminController.updateSettings);
 apiRouter.get('/users/me', requireAuth, getCurrentUser);
 apiRouter.get('/users', requireAuth, requireAdmin, listUsers);
 apiRouter.get('/vendors', listVendors);
@@ -152,6 +164,7 @@ apiRouter.get('/products/export', requireAuth, requireRole('admin', 'vendor'), w
 apiRouter.get('/products/:id', productsController.getByIdOrSlug);
 
 apiRouter.get('/users/:id/audit-logs', requireAuth, requireAdmin, adminController.auditLogs);
+apiRouter.patch('/users/:id', requireAuth, requireAdmin, adminController.updateUserStatus);
 apiRouter.post('/users', requireAuth, requireAdmin, (_req: Request, res: Response) => res.status(501).json({ success: false, message: 'User creation endpoint is declared for CMS integration; persistence policy remains to implement.' }));
 apiRouter.patch('/products/:id', requireAuth, requireRole('admin', 'vendor'), requirePermission('products:update'), validateRequest(validateProductUpdate), productsController.update);
 apiRouter.get('/vendors/:id', requireAuth, requireRole('admin', 'vendor'), adminController.vendorById);

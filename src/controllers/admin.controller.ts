@@ -65,6 +65,39 @@ function vendorPipeline(match: Record<string, unknown> = {}, sort: Record<string
 
 export const adminController = {
 
+  async analyticsOverview(_req: Request, res: Response) {
+    const [orders, users, vendors, products, revenueRows, topProducts, topVendors, topCategories, monthly] = await Promise.all([
+      Order.countDocuments(),
+      User.countDocuments({ disabled: { $ne: true } }),
+      Vendor.countDocuments({ status: 'active' }),
+      Product.countDocuments({ status: 'active' }),
+      Order.aggregate([{ $match: { paymentStatus: 'paid' } }, { $group: { _id: null, revenue: { $sum: '$totalAmount' }, averageOrderValue: { $avg: '$totalAmount' } } }]),
+      Order.aggregate([{ $unwind: '$items' }, { $group: { _id: '$items.name', units: { $sum: '$items.quantity' }, revenue: { $sum: '$items.totalPrice' } } }, { $sort: { units: -1 } }, { $limit: 8 }]),
+      Order.aggregate([{ $match: { paymentStatus: 'paid' } }, { $group: { _id: '$vendor', revenue: { $sum: '$totalAmount' }, orders: { $sum: 1 } } }, { $sort: { revenue: -1 } }, { $limit: 8 }]),
+      Product.aggregate([{ $lookup: { from: 'categories', localField: 'category', foreignField: '_id', as: 'categoryDoc' } }, { $unwind: { path: '$categoryDoc', preserveNullAndEmptyArrays: true } }, { $group: { _id: '$categoryDoc.name', products: { $sum: 1 } } }, { $sort: { products: -1 } }, { $limit: 8 }]),
+      Order.aggregate([{ $match: { paymentStatus: 'paid' } }, { $group: { _id: { y: { $year: '$createdAt' }, m: { $month: '$createdAt' } }, revenue: { $sum: '$totalAmount' }, orders: { $sum: 1 } } }, { $sort: { '_id.y': 1, '_id.m': 1 } }, { $limit: 12 }]),
+    ]);
+    const financial = revenueRows[0] || { revenue: 0, averageOrderValue: 0 };
+    return res.json({ success: true, data: { revenue: financial.revenue, orders, newCustomers: users, activeVendors: vendors, activeProducts: products, averageOrderValue: financial.averageOrderValue || 0, conversion: orders && users ? Number(((orders / users) * 100).toFixed(2)) : 0, campaigns: { active: 0, revenue: 0 }, monthly: monthly.map((row) => ({ label: `${row._id.m}/${row._id.y}`, revenue: row.revenue, orders: row.orders })), topProducts, topVendors, topCategories } });
+  },
+  async analyticsSection(req: Request, res: Response) {
+    return adminController.analyticsOverview(req, res);
+  },
+  async auditLogById(req: Request, res: Response) {
+    if (!Types.ObjectId.isValid(req.params.id)) return res.status(400).json({ success: false, message: 'Invalid audit log id' });
+    const data = await AdminAuditLog.findById(req.params.id).populate('actorId', 'name email role');
+    if (!data) return res.status(404).json({ success: false, message: 'Audit log not found' });
+    return res.json({ success: true, data });
+  },
+  async auditLogsExport(req: Request, res: Response) {
+    const logs = await AdminAuditLog.find().populate('actorId', 'name email role').sort({ createdAt: -1 }).limit(1000);
+    const header = 'createdAt,actor,action,resource,resourceId\n';
+    const body = logs.map((log) => [log.createdAt?.toISOString(), (log.actorId as any)?.email || 'system', log.action, log.resource, log.resourceId || ''].map((value) => `"${String(value ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="diamarket-audit-logs.csv"');
+    return res.send(header + body);
+  },
+
   async auditLogs(req: Request, res: Response) {
     const page = Math.max(Number(req.query.page || 1), 1);
     const limit = Math.min(Math.max(Number(req.query.limit || 20), 1), 100);
