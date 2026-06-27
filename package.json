@@ -27,7 +27,8 @@
     "mongoose": "^8.4.3",
     "morgan": "^1.10.0",
     "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^5.0.1"
+    "swagger-ui-express": "^5.0.1",
+    "@diamarket/design-system": "file:../../packages/design-system"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",

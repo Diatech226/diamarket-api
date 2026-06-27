@@ -189,6 +189,48 @@ export const adminController = {
     const effectiveCommissionRate = toRate(vendor.commissionRate) ?? globalCommissionRate;
     return res.json({ success: true, data: { vendor, products, orders, stats: { revenue, averageOrderValue: paidOrders.length ? revenue / paidOrders.length : 0, pendingOrders: orders.filter((order) => ['pending', 'confirmed', 'processing'].includes(order.status)).length, deliveredOrders: orders.filter((order) => order.status === 'delivered').length, activeProducts: products.filter((product) => product.status === 'active').length, draftProducts: products.filter((product) => product.status === 'draft').length, archivedProducts: products.filter((product) => product.status === 'archived').length, globalCommissionRate, effectiveCommissionRate, estimatedCommission: revenue * effectiveCommissionRate } } });
   },
+
+  async updateVendor(req: Request, res: Response) {
+    if (!Types.ObjectId.isValid(req.params.id)) return res.status(400).json({ success: false, message: 'Invalid vendor id' });
+    const allowed = ['shopName', 'phone', 'country', 'city', 'status', 'commissionRate'];
+    const update = Object.fromEntries(Object.entries(req.body || {}).filter(([key]) => allowed.includes(key)));
+    if (update.status && !vendorStatuses.includes(String(update.status))) return res.status(400).json({ success: false, message: 'Invalid vendor status' });
+    const data = await Vendor.findByIdAndUpdate(req.params.id, update, { new: true, runValidators: true });
+    if (!data) return res.status(404).json({ success: false, message: 'Vendor not found' });
+    await logAdminAction(getAuth(req)!.userId, 'vendor.updated', 'vendor', data.id, { fields: Object.keys(update) });
+    return res.json({ success: true, data });
+  },
+  async vendorCatalog(req: Request, res: Response) {
+    if (!Types.ObjectId.isValid(req.params.id)) return res.status(400).json({ success: false, message: 'Invalid vendor id' });
+    const filter: Record<string, unknown> = { vendor: req.params.id };
+    if (req.query.status && ['draft', 'active', 'archived'].includes(String(req.query.status))) filter.status = req.query.status;
+    if (req.query.search) filter.$text = { $search: String(req.query.search) };
+    const data = await Product.find(filter).populate('category vendor').sort({ createdAt: -1 }).limit(100);
+    return res.json({ success: true, data, meta: { message: 'Vendor-scoped catalog; product mutations continue to use product endpoints.' } });
+  },
+  async vendorOrders(req: Request, res: Response) {
+    if (!Types.ObjectId.isValid(req.params.id)) return res.status(400).json({ success: false, message: 'Invalid vendor id' });
+    const data = await Order.find({ vendor: req.params.id }).populate('customer items.product').sort({ createdAt: -1 }).limit(100);
+    return res.json({ success: true, data });
+  },
+  async vendorCustomers(req: Request, res: Response) {
+    if (!Types.ObjectId.isValid(req.params.id)) return res.status(400).json({ success: false, message: 'Invalid vendor id' });
+    const orders = await Order.find({ vendor: req.params.id }).populate('customer').sort({ createdAt: -1 }).limit(200);
+    const map = new Map<string, { customer: unknown; orders: number; revenue: number; lastOrderAt?: Date }>();
+    for (const order of orders) { const key = String(order.customer?._id ?? order.customer ?? 'guest'); const row = map.get(key) ?? { customer: order.customer ?? { name: 'Client invité' }, orders: 0, revenue: 0 }; row.orders += 1; row.revenue += order.totalAmount || 0; row.lastOrderAt = order.createdAt; map.set(key, row); }
+    return res.json({ success: true, data: Array.from(map.values()) });
+  },
+  async vendorAnalytics(req: Request, res: Response) {
+    if (!Types.ObjectId.isValid(req.params.id)) return res.status(400).json({ success: false, message: 'Invalid vendor id' });
+    const orders = await Order.find({ vendor: req.params.id }).sort({ createdAt: -1 }).limit(500);
+    const paid = orders.filter((order) => order.paymentStatus === 'paid');
+    const revenue = paid.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+    return res.json({ success: true, data: { sales: paid.length, revenue, orders: orders.length, newCustomers: new Set(orders.map((order) => String(order.customer))).size, conversion: 0, traffic: [], popularProducts: [], averageOrderValue: paid.length ? revenue / paid.length : 0, countries: [], aiInsights: { status: 'planned', message: 'Future IA statistics contract is reserved.' } } });
+  },
+  async vendorDocuments(req: Request, res: Response) {
+    if (!Types.ObjectId.isValid(req.params.id)) return res.status(400).json({ success: false, message: 'Invalid vendor id' });
+    return res.json({ success: true, data: [], meta: { storage: 'secure-storage-planned', categories: ['kyc', 'business_registry', 'identity', 'certificate', 'contract', 'invoice'] } });
+  },
   async updateVendorStatus(req: Request, res: Response) {
     if (!['active', 'suspended'].includes(req.body.status)) return res.status(400).json({ success: false, message: 'Invalid vendor status' });
     const data = await Vendor.findByIdAndUpdate(req.params.id, { status: req.body.status, isActive: req.body.status === 'active' }, { new: true, runValidators: true });

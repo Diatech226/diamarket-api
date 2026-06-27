@@ -95,9 +95,8 @@ export const productsController = {
 
   async remove(req: Request, res: Response) {
     if (!isObjectId(req.params.id)) return jsonError(res, 400, 'Invalid product id');
-    const deleted = await Product.findOneAndDelete({ _id: req.params.id, ...ownerScope(getAuth(req)!) });
-    if (!deleted) return jsonError(res, 404, 'Product not found');
-    await syncMediaUsage('product', deleted._id, 'images', [], deleted.images ?? []);
-    return res.status(204).send();
+    const archived = await Product.findOneAndUpdate({ _id: req.params.id, ...ownerScope(getAuth(req)!) }, { status: 'archived' }, { new: true });
+    if (!archived) return jsonError(res, 404, 'Product not found');
+    return res.json({ success: true, data: archived, message: 'Product archived' });
   },
 };
